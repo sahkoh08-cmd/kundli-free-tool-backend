@@ -9,8 +9,6 @@ const app = express();
 
 const PORT = process.env.PORT || 3000;
 
-const BACKEND_BASE_URL = "https://kundli-free-tool-backend.onrender.com";
-
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -96,7 +94,7 @@ app.get("/api/free-kundli-test", function (req, res) {
     }
 
     .container {
-      max-width: 1050px;
+      max-width: 1180px;
       margin: 0 auto;
       background: #fffaf1;
       padding: 28px;
@@ -106,7 +104,7 @@ app.get("/api/free-kundli-test", function (req, res) {
 
     h1 {
       margin-top: 0;
-      font-size: 32px;
+      font-size: 34px;
     }
 
     p {
@@ -166,10 +164,6 @@ app.get("/api/free-kundli-test", function (req, res) {
       background: #fff3d8;
     }
 
-    .city-option:last-child {
-      border-bottom: 0;
-    }
-
     .selected-city {
       font-size: 12px;
       margin-top: 6px;
@@ -189,10 +183,6 @@ app.get("/api/free-kundli-test", function (req, res) {
       font-weight: bold;
     }
 
-    button:hover {
-      background: #501111;
-    }
-
     .result {
       margin-top: 20px;
       display: none;
@@ -200,7 +190,7 @@ app.get("/api/free-kundli-test", function (req, res) {
 
     .summary {
       display: grid;
-      grid-template-columns: repeat(4, minmax(0, 1fr));
+      grid-template-columns: repeat(5, minmax(0, 1fr));
       gap: 12px;
       margin-bottom: 20px;
     }
@@ -220,7 +210,7 @@ app.get("/api/free-kundli-test", function (req, res) {
     }
 
     .card-value {
-      font-size: 19px;
+      font-size: 18px;
       font-weight: bold;
     }
 
@@ -233,16 +223,30 @@ app.get("/api/free-kundli-test", function (req, res) {
       font-size: 13px;
     }
 
-    .chart-wrap {
-      display: flex;
-      justify-content: center;
+    .chart-row {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 22px;
       margin: 20px 0 32px;
     }
 
+    .chart-card {
+      background: #fff;
+      border: 1px solid #ead8b8;
+      border-radius: 16px;
+      padding: 18px;
+    }
+
+    .chart-card h2 {
+      margin-top: 0;
+      font-size: 22px;
+    }
+
     .north-chart {
-      width: 520px;
-      height: 520px;
+      width: 460px;
+      height: 460px;
       max-width: 100%;
+      margin: 0 auto;
       position: relative;
       background: #fff;
       border: 2px solid #6d1b1b;
@@ -351,21 +355,9 @@ app.get("/api/free-kundli-test", function (req, res) {
       margin-top: 15px;
     }
 
-    @media (max-width: 700px) {
-      body {
-        padding: 15px;
-      }
-
-      .container {
-        padding: 18px;
-      }
-
-      form, .summary, .houses {
+    @media (max-width: 900px) {
+      form, .summary, .chart-row, .houses {
         grid-template-columns: 1fr;
-      }
-
-      .city-suggestions {
-        top: 72px;
       }
 
       .north-chart {
@@ -387,29 +379,29 @@ app.get("/api/free-kundli-test", function (req, res) {
 <body>
   <div class="container">
     <h1>Free Kundli Test</h1>
-    <p>This is only our private testing page. Later we will convert this into Shopify homepage design.</p>
+    <p>This is our private local testing page. It now tests D1 and D9 from the local backend.</p>
 
     <form id="kundliForm">
       <div>
         <label>Name</label>
-        <input name="name" value="Rahul" required>
+        <input name="name" value="Saumil" required>
       </div>
 
       <div>
         <label>Date of Birth</label>
-        <input name="dateOfBirth" type="date" value="1995-08-15" required>
+        <input name="dateOfBirth" type="date" value="1995-05-02" required>
       </div>
 
       <div>
         <label>Time of Birth</label>
-        <input name="timeOfBirth" type="time" value="14:30" required>
+        <input name="timeOfBirth" type="time" value="21:30" required>
       </div>
 
       <div class="place-wrapper">
         <label>Birth Place</label>
-        <input id="birthPlaceInput" name="birthPlace" value="New Delhi, Delhi, India" autocomplete="off" required>
+        <input id="birthPlaceInput" name="birthPlace" value="Chandigarh, India" autocomplete="off" required>
         <div class="city-suggestions" id="citySuggestions"></div>
-        <div class="selected-city" id="selectedCityText">Selected: New Delhi, Delhi, India</div>
+        <div class="selected-city" id="selectedCityText">Selected: Chandigarh, India</div>
       </div>
 
       <button type="submit">Generate Free Kundli</button>
@@ -423,9 +415,16 @@ app.get("/api/free-kundli-test", function (req, res) {
 
       <div class="settings-box" id="settingsBox"></div>
 
-      <h2>North Indian Lagna Chart</h2>
-      <div class="chart-wrap">
-        <div class="north-chart" id="northChart"></div>
+      <div class="chart-row">
+        <div class="chart-card">
+          <h2>D1 Lagna Chart</h2>
+          <div class="north-chart" id="northChart"></div>
+        </div>
+
+        <div class="chart-card">
+          <h2>D9 Navamsa Chart</h2>
+          <div class="north-chart" id="navamsaChart"></div>
+        </div>
       </div>
 
       <h2>Planetary Details</h2>
@@ -437,13 +436,17 @@ app.get("/api/free-kundli-test", function (req, res) {
             <th>Degree</th>
             <th>Nakshatra</th>
             <th>Pada</th>
+            <th>D9 Sign</th>
           </tr>
         </thead>
         <tbody id="planetRows"></tbody>
       </table>
 
-      <h2>House-wise Chart Data</h2>
+      <h2>D1 House-wise Chart Data</h2>
       <div class="houses" id="houses"></div>
+
+      <h2>D9 House-wise Chart Data</h2>
+      <div class="houses" id="navamsaHouses"></div>
 
       <div class="premium-box">
         <h2>Want Your Full Premium Kundli Report?</h2>
@@ -454,25 +457,25 @@ app.get("/api/free-kundli-test", function (req, res) {
   </div>
 
   <script>
-    const BACKEND_BASE_URL = "${BACKEND_BASE_URL}";
-
     const form = document.getElementById("kundliForm");
     const resultBox = document.getElementById("result");
     const summaryBox = document.getElementById("summary");
     const settingsBox = document.getElementById("settingsBox");
     const planetRows = document.getElementById("planetRows");
     const housesBox = document.getElementById("houses");
+    const navamsaHousesBox = document.getElementById("navamsaHouses");
     const northChart = document.getElementById("northChart");
+    const navamsaChart = document.getElementById("navamsaChart");
     const errorBox = document.getElementById("error");
     const birthPlaceInput = document.getElementById("birthPlaceInput");
     const citySuggestions = document.getElementById("citySuggestions");
     const selectedCityText = document.getElementById("selectedCityText");
 
     let selectedCity = {
-      name: "New Delhi",
-      displayName: "New Delhi, Delhi, India",
-      latitude: 28.6139,
-      longitude: 77.2090,
+      name: "Chandigarh",
+      displayName: "Chandigarh, India",
+      latitude: 30.7333,
+      longitude: 76.7794,
       timezone: "Asia/Kolkata"
     };
 
@@ -501,7 +504,7 @@ app.get("/api/free-kundli-test", function (req, res) {
 
     async function searchCityOptions(query) {
       try {
-        const response = await fetch(BACKEND_BASE_URL + "/api/cities?query=" + encodeURIComponent(query));
+        const response = await fetch("/api/cities?query=" + encodeURIComponent(query));
         const data = await response.json();
 
         if (!data.success) {
@@ -564,7 +567,7 @@ app.get("/api/free-kundli-test", function (req, res) {
       };
 
       try {
-        const response = await fetch(BACKEND_BASE_URL + "/api/free-kundli", {
+        const response = await fetch("/api/free-kundli", {
           method: "POST",
           headers: {
             "Content-Type": "application/json"
@@ -572,15 +575,7 @@ app.get("/api/free-kundli-test", function (req, res) {
           body: JSON.stringify(payload)
         });
 
-        const responseText = await response.text();
-
-        let data;
-
-        try {
-          data = JSON.parse(responseText);
-        } catch (jsonError) {
-          throw new Error("Backend returned non-JSON response: " + responseText.slice(0, 120));
-        }
+        const data = await response.json();
 
         if (!data.success) {
           throw new Error(data.error || data.details || "Something went wrong");
@@ -596,10 +591,11 @@ app.get("/api/free-kundli-test", function (req, res) {
       resultBox.style.display = "block";
 
       summaryBox.innerHTML = [
-        ["Lagna", data.summary.lagnaSign],
-        ["Lagna Nakshatra", data.summary.lagnaNakshatra + " Pada " + data.summary.lagnaPada],
+        ["D1 Lagna", data.summary.lagnaSign],
+        ["D1 Lagna Nakshatra", data.summary.lagnaNakshatra + " Pada " + data.summary.lagnaPada],
         ["Moon Sign", data.summary.moonSign],
-        ["Moon Nakshatra", data.summary.moonNakshatra + " Pada " + data.summary.moonPada]
+        ["Moon Nakshatra", data.summary.moonNakshatra + " Pada " + data.summary.moonPada],
+        ["D9 Lagna", data.summary.navamsaLagnaSign]
       ].map(function (item) {
         return '<div class="card"><div class="card-title">' + item[0] + '</div><div class="card-value">' + item[1] + '</div></div>';
       }).join("");
@@ -609,27 +605,40 @@ app.get("/api/free-kundli-test", function (req, res) {
         data.calculationSettings.zodiac + ', ' +
         data.calculationSettings.ayanamsa + ', ' +
         data.calculationSettings.houseSystem + '<br>' +
-        '<strong>Birth Timezone:</strong> ' + data.calculationSettings.timezone +
-        ' | Offset used: ' + data.calculationSettings.timezoneOffsetUsed +
+        '<strong>Ayanamsa:</strong> ' + data.calculationSettings.ayanamsaDegree +
+        ' | <strong>Sidereal Asc:</strong> ' + data.calculationSettings.siderealAscendant +
+        ' | <strong>Birth Timezone:</strong> ' + data.calculationSettings.timezone +
         ' | UTC used: ' + data.calculationSettings.utcDateTimeUsed;
 
       planetRows.innerHTML = Object.keys(data.planets).map(function (key) {
         const p = data.planets[key];
+        const d9 = data.navamsa.planets[key];
 
         return '<tr>' +
           '<td>' + p.name + '</td>' +
           '<td>' + p.sign + '</td>' +
-          '<td>' + p.degreeInSign + '</td>' +
+          '<td>' + p.degreeInSign + '°</td>' +
           '<td>' + p.nakshatra + '</td>' +
           '<td>' + p.pada + '</td>' +
+          '<td>' + d9.sign + '</td>' +
         '</tr>';
       }).join("");
 
-      housesBox.innerHTML = Object.keys(data.chart).map(function (houseKey) {
-        const h = data.chart[houseKey];
+      housesBox.innerHTML = renderHouseCards(data.chart, true);
+      navamsaHousesBox.innerHTML = renderHouseCards(data.navamsa.chart, false);
+
+      renderNorthIndianChart(northChart, data.chart, true);
+      renderNorthIndianChart(navamsaChart, data.navamsa.chart, false);
+    }
+
+    function renderHouseCards(chart, showDegrees) {
+      return Object.keys(chart).map(function (houseKey) {
+        const h = chart[houseKey];
         const planets = h.planets.length
           ? h.planets.map(function (p) {
-              return p.shortName + " " + p.degreeInSign + "°";
+              return showDegrees && p.degreeInSign
+                ? p.shortName + " " + p.degreeInSign + "°"
+                : p.shortName;
             }).join(", ")
           : "No planets";
 
@@ -638,11 +647,9 @@ app.get("/api/free-kundli-test", function (req, res) {
           '<div>' + planets + '</div>' +
         '</div>';
       }).join("");
-
-      renderNorthIndianChart(data.chart);
     }
 
-    function renderNorthIndianChart(chart) {
+    function renderNorthIndianChart(targetElement, chart, showDegrees) {
       const positions = {
         1: { x: 50, y: 25 },
         2: { x: 25, y: 8 },
@@ -683,7 +690,7 @@ app.get("/api/free-kundli-test", function (req, res) {
         '</div>';
       }).join("");
 
-      northChart.innerHTML = svg + labels;
+      targetElement.innerHTML = svg + labels;
     }
   </script>
 </body>
