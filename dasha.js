@@ -133,12 +133,22 @@ function calculateVimshottariDasha(input) {
 
   const balanceYMD = calculateYMDFromDays(balanceDays);
 
+  /*
+    Important display convention:
+    The balance calculation still uses precise proportional days.
+    But Mahadasha table dates are displayed using calendar-year transitions,
+    matching the common AstroSage-style output more closely.
+
+    Example:
+    Moon starts 11/10/1987 and runs 10 calendar years,
+    so it displays up to 11/10/1997.
+  */
   const birthDashaStart = birthDateTime.minus({
     days: elapsedDays
-  });
+  }).startOf("day");
 
-  const birthDashaEnd = birthDateTime.plus({
-    days: balanceDays
+  const birthDashaEnd = birthDashaStart.plus({
+    years: birthDasha.years
   });
 
   const sequence = [];
@@ -161,7 +171,7 @@ function calculateVimshottariDasha(input) {
     currentDasha = getNextDasha(currentDasha.name);
 
     const currentEnd = currentStart.plus({
-      days: currentDasha.years * DAYS_PER_YEAR
+      years: currentDasha.years
     });
 
     sequence.push({
