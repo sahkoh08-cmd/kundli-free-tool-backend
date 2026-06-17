@@ -1,5 +1,6 @@
 const sweph = require("sweph");
 const { DateTime } = require("luxon");
+const { calculateVimshottariDasha } = require("./dasha");
 
 const ZODIAC_SIGNS = [
   "Aries",
@@ -57,12 +58,6 @@ const PLANETS = [
   { key: "rahu", name: "Rahu", shortName: "Ra", swephId: 10 }
 ];
 
-/*
-  Swiss Ephemeris flags:
-  SEFLG_SWIEPH = 2
-  SEFLG_SPEED = 256
-  SEFLG_SIDEREAL = 65536
-*/
 const PLANET_CALCULATION_FLAGS = 2 + 256 + 65536;
 
 function normalizeDegree(degree) {
@@ -146,10 +141,6 @@ function getAyanamsa(julianDay) {
 }
 
 function getSiderealAscendantLongitude(julianDay, latitude, longitude) {
-  /*
-    We first calculate tropical Ascendant using Swiss Ephemeris houses,
-    then manually subtract Lahiri ayanamsa to get Sidereal Lagna.
-  */
   const housesResult = sweph.houses(
     julianDay,
     latitude,
@@ -217,22 +208,8 @@ function getNavamsaSignFromLongitude(longitude) {
   const normalized = normalizeDegree(longitude);
   const signIndex = Math.floor(normalized / 30);
   const degreeInSign = normalized - signIndex * 30;
-
-  /*
-    One Navamsa = 3 degrees 20 minutes = 3.333333 degrees.
-  */
   const navamsaPart = Math.floor(degreeInSign / (30 / 9));
 
-  /*
-    Movable signs start from themselves:
-    Aries, Cancer, Libra, Capricorn
-
-    Fixed signs start from 9th sign:
-    Taurus, Leo, Scorpio, Aquarius
-
-    Dual signs start from 5th sign:
-    Gemini, Virgo, Sagittarius, Pisces
-  */
   const movableSigns = [0, 3, 6, 9];
   const fixedSigns = [1, 4, 7, 10];
 
@@ -395,10 +372,6 @@ function calculateKundli(input) {
     1
   );
 
-  /*
-    Ayanamsa:
-    1 = Lahiri / Chitrapaksha
-  */
   if (typeof sweph.set_sid_mode === "function") {
     sweph.set_sid_mode(1, 0, 0);
   }
@@ -466,6 +439,12 @@ function calculateKundli(input) {
   const navamsaAscendant = createNavamsaAscendant(ascendant);
   const navamsaChart = createNavamsaChartData(navamsaAscendant.signNumber, navamsaPlanets);
 
+  const vimshottariDasha = calculateVimshottariDasha({
+    moonLongitude: planets.moon.longitude,
+    birthLocalDateTimeISO: birthTime.localDateTime.toISO(),
+    timezone: birthTime.timezone
+  });
+
   return {
     success: true,
     calculationSettings: {
@@ -497,7 +476,9 @@ function calculateKundli(input) {
       moonSign: planets.moon.sign,
       moonNakshatra: planets.moon.nakshatra,
       moonPada: planets.moon.pada,
-      navamsaLagnaSign: navamsaAscendant.sign
+      navamsaLagnaSign: navamsaAscendant.sign,
+      birthDasha: vimshottariDasha.birthDashaShortName,
+      dashaBalance: vimshottariDasha.balanceAtBirth.text
     },
     ascendant,
     planets,
@@ -506,6 +487,9 @@ function calculateKundli(input) {
       ascendant: navamsaAscendant,
       planets: navamsaPlanets,
       chart: navamsaChart
+    },
+    dashas: {
+      vimshottari: vimshottariDasha
     }
   };
 }
