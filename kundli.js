@@ -57,11 +57,21 @@ const PLANETS = [
   { key: "rahu", name: "Rahu", shortName: "Ra", swephId: 10 }
 ];
 
-const CALCULATION_FLAGS = 2 + 256 + 65536;
+/*
+  Swiss Ephemeris flags:
+  SEFLG_SWIEPH = 2
+  SEFLG_SPEED = 256
+  SEFLG_SIDEREAL = 65536
+*/
+const PLANET_CALCULATION_FLAGS = 2 + 256 + 65536;
 
 function normalizeDegree(degree) {
   let value = Number(degree) % 360;
-  if (value < 0) value += 360;
+
+  if (value < 0) {
+    value += 360;
+  }
+
   return value;
 }
 
@@ -121,6 +131,51 @@ function getHousesDataFromSwephResult(result) {
   }
 
   return result;
+}
+
+function getAyanamsa(julianDay) {
+  if (typeof sweph.get_ayanamsa_ut === "function") {
+    return Number(sweph.get_ayanamsa_ut(julianDay));
+  }
+
+  if (typeof sweph.get_ayanamsa === "function") {
+    return Number(sweph.get_ayanamsa(julianDay));
+  }
+
+  /*
+    Fallback only if the package does not expose ayanamsa.
+    Around 1995 Lahiri is roughly 23.75 degrees.
+  */
+  return 23.75;
+}
+
+function getSiderealAscendantLongitude(julianDay, latitude, longitude) {
+  /*
+    This package's house calculation is giving us tropical Ascendant.
+    For Vedic Lahiri Kundli, we manually subtract Lahiri ayanamsa.
+  */
+  const housesResult = sweph.houses(
+    julianDay,
+    latitude,
+    longitude,
+    "P"
+  );
+
+  const housesData = getHousesDataFromSwephResult(housesResult);
+
+  if (!housesData || !housesData.points || typeof housesData.points[0] !== "number") {
+    throw new Error("Could not calculate Ascendant / Lagna from house data");
+  }
+
+  const tropicalAscendant = housesData.points[0];
+  const ayanamsa = getAyanamsa(julianDay);
+  const siderealAscendant = normalizeDegree(tropicalAscendant - ayanamsa);
+
+  return {
+    tropicalAscendant: Number(normalizeDegree(tropicalAscendant).toFixed(4)),
+    ayanamsa: Number(ayanamsa.toFixed(4)),
+    siderealAscendant: Number(siderealAscendant.toFixed(4))
+  };
 }
 
 function calculateHouseFromSign(lagnaSignNumber, planetSignNumber) {
@@ -239,6 +294,10 @@ function calculateKundli(input) {
     1
   );
 
+  /*
+    Ayanamsa:
+    1 = Lahiri / Chitrapaksha
+  */
   if (typeof sweph.set_sid_mode === "function") {
     sweph.set_sid_mode(1, 0, 0);
   }
@@ -246,7 +305,7 @@ function calculateKundli(input) {
   const planets = {};
 
   PLANETS.forEach(function (planet) {
-    const result = sweph.calc_ut(julianDay, planet.swephId, CALCULATION_FLAGS);
+    const result = sweph.calc_ut(julianDay, planet.swephId, PLANET_CALCULATION_FLAGS);
     const longitudeValue = getLongitudeFromSwephResult(result);
 
     const zodiac = getZodiacSign(longitudeValue);
@@ -280,23 +339,19 @@ function calculateKundli(input) {
     pada: ketuNakshatra.pada
   };
 
-  const housesResult = sweph.houses(
+  const ascendantCalculation = getSiderealAscendantLongitude(
     julianDay,
     birthLatitude,
-    birthLongitude,
-    "W"
+    birthLongitude
   );
 
-  const housesData = getHousesDataFromSwephResult(housesResult);
-
-  const ascendantLongitude = housesData.points[0];
-  const ascendantZodiac = getZodiacSign(ascendantLongitude);
-  const ascendantNakshatra = getNakshatra(ascendantLongitude);
+  const ascendantZodiac = getZodiacSign(ascendantCalculation.siderealAscendant);
+  const ascendantNakshatra = getNakshatra(ascendantCalculation.siderealAscendant);
 
   const ascendant = {
     name: "Lagna",
     shortName: "As",
-    longitude: Number(normalizeDegree(ascendantLongitude).toFixed(4)),
+    longitude: ascendantCalculation.siderealAscendant,
     sign: ascendantZodiac.sign,
     signNumber: ascendantZodiac.signNumber,
     degreeInSign: ascendantZodiac.degreeInSign,
@@ -311,6 +366,9 @@ function calculateKundli(input) {
     calculationSettings: {
       zodiac: "Sidereal",
       ayanamsa: "Lahiri",
+      ayanamsaDegree: ascendantCalculation.ayanamsa,
+      tropicalAscendant: ascendantCalculation.tropicalAscendant,
+      siderealAscendant: ascendantCalculation.siderealAscendant,
       nodeType: "Mean Rahu/Ketu",
       houseSystem: "Whole Sign",
       timezone: birthTime.timezone,

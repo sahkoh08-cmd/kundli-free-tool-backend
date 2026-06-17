@@ -9,6 +9,8 @@ const app = express();
 
 const PORT = process.env.PORT || 3000;
 
+const BACKEND_BASE_URL = "https://kundli-free-tool-backend.onrender.com";
+
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -36,6 +38,47 @@ app.get("/api/cities", function (req, res) {
     success: true,
     cities
   });
+});
+
+app.post("/api/free-kundli", function (req, res) {
+  try {
+    const {
+      name,
+      dateOfBirth,
+      timeOfBirth,
+      birthPlace,
+      latitude,
+      longitude,
+      timezone
+    } = req.body;
+
+    if (!name || !dateOfBirth || !timeOfBirth || !birthPlace) {
+      return res.status(400).json({
+        success: false,
+        error: "Missing required birth details"
+      });
+    }
+
+    const result = calculateKundli({
+      name,
+      dateOfBirth,
+      timeOfBirth,
+      birthPlace,
+      latitude,
+      longitude,
+      timezone
+    });
+
+    res.json(result);
+  } catch (error) {
+    console.error(error);
+
+    res.status(500).json({
+      success: false,
+      error: "Kundli calculation failed",
+      details: error.message
+    });
+  }
 });
 
 app.get("/api/free-kundli-test", function (req, res) {
@@ -411,6 +454,8 @@ app.get("/api/free-kundli-test", function (req, res) {
   </div>
 
   <script>
+    const BACKEND_BASE_URL = "${BACKEND_BASE_URL}";
+
     const form = document.getElementById("kundliForm");
     const resultBox = document.getElementById("result");
     const summaryBox = document.getElementById("summary");
@@ -456,7 +501,7 @@ app.get("/api/free-kundli-test", function (req, res) {
 
     async function searchCityOptions(query) {
       try {
-        const response = await fetch("/api/cities?query=" + encodeURIComponent(query));
+        const response = await fetch(BACKEND_BASE_URL + "/api/cities?query=" + encodeURIComponent(query));
         const data = await response.json();
 
         if (!data.success) {
@@ -519,7 +564,7 @@ app.get("/api/free-kundli-test", function (req, res) {
       };
 
       try {
-        const response = await fetch("/api/free-kundli", {
+        const response = await fetch(BACKEND_BASE_URL + "/api/free-kundli", {
           method: "POST",
           headers: {
             "Content-Type": "application/json"
@@ -527,10 +572,18 @@ app.get("/api/free-kundli-test", function (req, res) {
           body: JSON.stringify(payload)
         });
 
-        const data = await response.json();
+        const responseText = await response.text();
+
+        let data;
+
+        try {
+          data = JSON.parse(responseText);
+        } catch (jsonError) {
+          throw new Error("Backend returned non-JSON response: " + responseText.slice(0, 120));
+        }
 
         if (!data.success) {
-          throw new Error(data.error || "Something went wrong");
+          throw new Error(data.error || data.details || "Something went wrong");
         }
 
         renderResult(data);
@@ -636,47 +689,6 @@ app.get("/api/free-kundli-test", function (req, res) {
 </body>
 </html>
   `);
-});
-
-app.post("/api/free-kundli", function (req, res) {
-  try {
-    const {
-      name,
-      dateOfBirth,
-      timeOfBirth,
-      birthPlace,
-      latitude,
-      longitude,
-      timezone
-    } = req.body;
-
-    if (!name || !dateOfBirth || !timeOfBirth || !birthPlace) {
-      return res.status(400).json({
-        success: false,
-        error: "Missing required birth details"
-      });
-    }
-
-    const result = calculateKundli({
-      name,
-      dateOfBirth,
-      timeOfBirth,
-      birthPlace,
-      latitude,
-      longitude,
-      timezone
-    });
-
-    res.json(result);
-  } catch (error) {
-    console.error(error);
-
-    res.status(500).json({
-      success: false,
-      error: "Kundli calculation failed",
-      details: error.message
-    });
-  }
 });
 
 app.listen(PORT, function () {
